@@ -25,7 +25,7 @@ Used Cloudformation template to create RDS stack with Master and Read Replica
 Replace your own VPC ID, Private Subnet ID's and Public Subnet ID's in rds.yml template before deploy. 
 *Option: Change MultiAZDatabase  default option to true if you want enable High availability of RDS
 
-`aws cloudformation create-stack --stack-name eggplant-rds --template-body file://templates/rds.yaml`
+`aws cloudformation create-stack --stack-name eggplant-rds --template-body file://cfn-templates/rds.yaml`
 
 ##Task 3
 Created helm chart to deploy the above created container in k8s cluster
