@@ -1,0 +1,19 @@
+replicaCount: 2
+eggplantImage:
+  repository: sridharrajv/eggplant:1.0.0
+  tag: "1.0.0"
+  pullPolicy: Always
+  internalPort: 8080
+service:
+  name: eggplant
+  type: ClusterIP
+  externalPort: 8080
+ingress:
+  enabled: true
+  path: /
+  whitelist_ips: "0.0.0.0/0"
+resources:
+  requests:
+    memory: "250Mi"
+  limits:
+    memory: "1024Mi"
