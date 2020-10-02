@@ -1,0 +1,8 @@
+apiVersion: v1
+description: A Helm chart for Eggplant exercise
+keywords:
+- exercise
+name: eggplant
+sources:
+- https://github.com/sridharvellingiri/eggplant/tree/master
+version: 1.0.0

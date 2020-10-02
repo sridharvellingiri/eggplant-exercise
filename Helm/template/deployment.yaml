@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eggplant-server
+  namespace: exercise
+spec:
+  selector:
+    matchLabels:
+      app: eggplant-server
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: eggplant-server
+        tier: frontend
+    spec:
+      containers:
+        - name: eggplant-server
+          image: {{ .Values.eggplantImage.repository }}
+          ports:
+            - containerPort: 8080

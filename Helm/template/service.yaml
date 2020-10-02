@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eggplant-server
+  labels:
+    app: eggplant-server
+    tier: cache
+  namespace: exercise
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+  selector:
+    app: eggplant-server
