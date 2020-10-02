@@ -1,0 +1,66 @@
+
+language: generic
+
+stages:
+  - name: Lint
+  - name: Build Docker image
+  - name: Deploy RDS cloudformation
+  - name: Deploy Helm chart
+  - name: Test
+
+env:
+  global:
+    - KUBERNETES_VERSION=1.17.6
+    - HELM_VERSION=3.3.0
+    - PATH=$HOME/.local/bin:$PATH
+    - export AWS_ACCESS_KEY_ID=$aws_access_key_id
+    - export AWS_SECRET_ACCESS_KEY=$aws_secret_access_key
+    - tag_name=$image_tag_name
+
+branches:
+  only:
+    - main
+    - develop
+
+before_install:
+  - pip install --user awscli
+
+install:
+  - curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v${KUBERNETES_VERSION}/bin/linux/amd64/kubectl &&
+    chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+  - curl https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz | tar zx &&
+    sudo mv linux-amd64/helm /usr/local/bin/ && helm version --client
+  - export PATH="~/bin:$PATH"
+
+jobs:
+  allow_failures:
+    - name: Deploy Application
+  include:
+    - name: Lint
+      stage: Lint
+      script: |
+        - helm lint Helm
+
+    - name: Build Docker image
+      stage: Build Docker image
+      script:
+        - docker build -t eggplant .
+        - docker tag eggplant:latest sridharrajv/eggplant:${tag_name}
+        - docker push sridharrajv/eggplant:${tag_name}
+
+    - name: Deploy RDS cloudformation
+      stage: Deploy RDS cloudformation
+      script:
+        - aws cloudformation create-stack --stack-name eggplant-rds --template-body file://templates/rds.yaml
+
+    - name: Deploy Helm chart
+      stage: Deploy Helm chart
+      script:
+        - kubectl create namespace exercise
+        - helm install eggplant ./Helm --namespace exercise
+
+    - name: Test
+      stage: Test
+      script:
+        - curl http://127.0.0.1:8080
+
