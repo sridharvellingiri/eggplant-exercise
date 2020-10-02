@@ -1,0 +1,146 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'PostgreSQL RDS Template '
+Parameters:
+  DBName:
+    Default: pgdb
+    Description: The database name
+    Type: String
+    MinLength: '1'
+    MaxLength: '8'
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: Enter letter and alphanumeric
+      characters.
+  MultiAZDatabase:
+    Default: false
+    Type: String
+  DBUsername:
+    Default: root
+    NoEcho: 'true'
+    Description: The database admin account username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: Enter letter and alphanumeric
+      characters.
+  DBPassword:
+    Default: root1234
+    NoEcho: 'true'
+    Description: The database admin account password
+    Type: String
+    MinLength: '8'
+  DBClass:
+    Default: db.t2.micro
+    Description: Database instance class
+    Type: String
+    AllowedValues:
+      - db.t2.micro
+      - db.m1.small
+      - db.m1.large
+      - db.m1.xlarge
+      - db.m2.xlarge
+    ConstraintDescription: database instance type.
+  DBAllocatedStorage:
+    Default: '5'
+    Description: The size of the database (Gb)
+    Type: Number
+    MinValue: '5'
+    MaxValue: '6144'
+    ConstraintDescription: enter size
+Mappings:
+  VPC:
+    single-vpc-pub-priv:
+      Id: "vpc-e8ac9c80"
+  Subnets:
+    private-subnet:
+      PrivateSubnet1: "subnet-f191418a"
+      PrivateSubnet2: "subnet-4da8f125"
+    public-subnet:
+      PublicSubnet1: "subnet-f191418a"
+      PublicSubnet2: "subnet-4da8f125"
+Resources:
+  RDSEC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: RDS access
+      VpcId:
+        Fn::FindInMap:
+          - VPC
+          - single-vpc-pub-priv
+          - Id
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.0.0.0/16
+  RDSParamGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: Database Parameter Group
+      Family: postgres12
+      Parameters:
+        shared_preload_libraries: pg_stat_statements
+  RDSSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: DB Private Subnet
+      SubnetIds:
+        - Fn::FindInMap:
+            - Subnets
+            - private-subnet
+            - PrivateSubnet1
+        - Fn::FindInMap:
+            - Subnets
+            - private-subnet
+            - PrivateSubnet2
+  pgDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBName:
+        Ref: DBName
+      AllocatedStorage:
+        Ref: DBAllocatedStorage
+      DBInstanceClass:
+        Ref: DBClass
+      Engine: postgres
+      MasterUsername:
+        Ref: DBUsername
+      MasterUserPassword:
+        Ref: DBPassword
+      DBSubnetGroupName:
+        Ref: RDSSubnetGroup
+      DBParameterGroupName:
+        Ref: RDSParamGroup
+      MultiAZ:
+        Ref: MultiAZDatabase
+      VPCSecurityGroups:
+        - Fn::GetAtt:
+            - RDSEC2SecurityGroup
+            - GroupId
+  ReplicaDB:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      SourceDBInstanceIdentifier:
+        Ref: pgDB
+      DBInstanceClass:
+        Ref: DBClass
+      Tags:
+        - Key: Name
+          Value: Read Replica Database
+Outputs:
+  JDBCConnectionString:
+    Description: JDBC connection string for database
+    Value:
+      Fn::Join:
+        - ''
+        - - jdbc:postgresql://
+          - Fn::GetAtt:
+              - pgDB
+              - Endpoint.Address
+          - ":"
+          - Fn::GetAtt:
+              - pgDB
+              - Endpoint.Port
+          - "/"
+          - Ref: DBName
